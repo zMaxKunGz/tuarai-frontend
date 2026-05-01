@@ -1,6 +1,6 @@
+import liff from '@line/liff'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { initLiff } from './liff'
 import { AnimalBrowser } from './pages/AnimalBrowser'
 import { AnimalParks } from './pages/AnimalParks'
 import { ParkDetail } from './pages/ParkDetail'
@@ -10,14 +10,20 @@ export default function App() {
   const [liffError, setLiffError] = useState<string | null>(null)
 
   useEffect(() => {
-    initLiff()
-      .then(() => setLiffReady(true))
+    liff.init({ liffId: import.meta.env.VITE_LIFF_ID })
+      .then(() => {
+        if (!liff.isLoggedIn() && !liff.isInClient()) {
+          liff.login()
+        }
+        setLiffReady(true)
+        liff.getProfile().then(profile => {
+          console.log(profile)
+        })
       .catch(err => {
         console.error('LIFF init failed:', err)
-        // In non-LINE browser (dev), allow app to still render
-        setLiffReady(true)
-        setLiffError('ไม่ได้เปิดผ่าน LINE — บางฟีเจอร์อาจไม่ทำงาน')
+        setLiffError(err)
       })
+    })
   }, [])
 
   if (!liffReady) {
