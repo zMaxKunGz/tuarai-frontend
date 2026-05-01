@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useProtectedAreaById } from '../hooks/useProtectedAreas'
 import { useWildlifeByIds } from '../hooks/useWildlife'
-import { DangerBadge } from '../components/DangerBadge'
 import { AnimalPopup } from '../components/AnimalPopup'
 import { IUCNBadge } from '../components/IUCNBadge'
 import type { Wildlife } from '../types'
@@ -43,12 +42,9 @@ export function ParkDetail() {
         <>
           {/* Park info card */}
           <div className="mx-4 mt-4 card p-4 space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{park.thName}</h2>
-                <p className="text-sm text-gray-500">{park.enName}</p>
-              </div>
-              <DangerBadge level={park.dangerLevel} />
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{park.thName}</h2>
+              <p className="text-sm text-gray-500">{park.enName}</p>
             </div>
 
             <div className="space-y-1.5 text-sm">
