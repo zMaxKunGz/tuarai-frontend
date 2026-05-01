@@ -1,6 +1,6 @@
 import liff from '@line/liff'
 import { useEffect, useState } from 'react'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AnimalBrowser } from './pages/AnimalBrowser'
 import { AnimalParks } from './pages/AnimalParks'
 import { ParkDetail } from './pages/ParkDetail'
@@ -60,7 +60,7 @@ export default function App() {
   }
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       {liffError && (
         <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-xs text-yellow-700 text-center">
           {liffError}
@@ -72,6 +72,6 @@ export default function App() {
         <Route path="/park/:parkId" element={<ParkDetail />} />
         <Route path="/report" element={<ReportSighting />} />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   )
 }

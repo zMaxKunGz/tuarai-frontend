@@ -1,6 +1,8 @@
 import liff from '@line/liff'
 import { useEffect, useRef, useState } from 'react'
 
+const DEMO_IMAGE_URL = 'https://www.piqsels.com/th/search?q=%E0%B8%8A%E0%B8%B0%E0%B8%99%E0%B8%B5'
+
 interface GpsLocation {
   latitude: number
   longitude: number
@@ -15,7 +17,6 @@ const MOCK_LOCATION: GpsLocation = {
 
 export function ReportSighting() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [hasImage, setHasImage] = useState(false)
   const [gps, setGps] = useState<GpsLocation>(MOCK_LOCATION)
   const [gpsSource, setGpsSource] = useState<'real' | 'mock'>('mock')
   const [submitting, setSubmitting] = useState(false)
@@ -41,12 +42,11 @@ export function ReportSighting() {
     const file = e.target.files?.[0]
     if (!file) return
     setPreviewUrl(URL.createObjectURL(file))
-    setHasImage(true)
     setError(null)
   }
 
   async function handleSubmit() {
-    if (!hasImage) {
+    if (!previewUrl) {
       setError('กรุณาเลือกภาพก่อน')
       return
     }
@@ -55,24 +55,80 @@ export function ReportSighting() {
     setError(null)
 
     try {
-      const coordText = `${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}`
-      const mapsUrl = `https://maps.google.com/?q=${gps.latitude},${gps.longitude}`
+      const imageUrl = DEMO_IMAGE_URL
 
+      const { latitude, longitude } = gps
+      const mapsUrl = `https://maps.google.com/?q=${latitude},${longitude}`
+      const coordText = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+
+      // 2. Send flex message (display card) + signal text for backend
       await liff.sendMessages([
         {
-          type: 'location',
-          title: `พิกัดที่พบสัตว์ (${gpsSource === 'real' ? 'GPS จริง' : 'จำลอง'})`,
-          address: `${coordText} — ${gps.label}`,
-          latitude: gps.latitude,
-          longitude: gps.longitude,
+          type: 'flex',
+          altText: `🐾 พบสัตว์ที่ไม่รู้จัก — ${coordText}`,
+          contents: {
+            type: 'bubble',
+            hero: {
+              type: 'image',
+              url: imageUrl,
+              size: 'full',
+              aspectRatio: '20:13',
+              aspectMode: 'cover',
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'md',
+              contents: [
+                {
+                  type: 'text',
+                  text: '🐾 พบสัตว์ที่ไม่รู้จัก',
+                  weight: 'bold',
+                  size: 'xl',
+                  wrap: true,
+                },
+                {
+                  type: 'box',
+                  layout: 'horizontal',
+                  spacing: 'sm',
+                  contents: [
+                    { type: 'text', text: '📍', flex: 0 },
+                    {
+                      type: 'text',
+                      text: `${gps.label}\n${coordText}`,
+                      size: 'sm',
+                      color: '#666666',
+                      flex: 1,
+                      wrap: true,
+                    },
+                  ],
+                },
+                {
+                  type: 'text',
+                  text: `แหล่ง GPS: ${gpsSource === 'real' ? 'จริง' : 'จำลอง'}`,
+                  size: 'xs',
+                  color: gpsSource === 'real' ? '#16a34a' : '#d97706',
+                },
+              ],
+            },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                {
+                  type: 'button',
+                  action: { type: 'uri', label: '🗺 ดูแผนที่', uri: mapsUrl },
+                  style: 'primary',
+                  color: '#16a34a',
+                },
+              ],
+            },
+          },
         },
+        // Signal for backend to process
         {
           type: 'text',
-          text:
-            `🐾 พบสัตว์ที่ไม่รู้จัก!\n` +
-            `📍 พิกัด: ${coordText}\n` +
-            `🗺 ดูแผนที่: ${mapsUrl}\n\n` +
-            `แนบภาพมาด้วยครับ/ค่ะ กรุณาช่วยระบุชนิดสัตว์ในภาพด้วย 🙏`,
+          text: `IDENTIFY_WILDLIFE::${imageUrl}::${latitude}::${longitude}`,
         },
       ])
 
@@ -88,7 +144,7 @@ export function ReportSighting() {
     <div className="min-h-screen bg-gray-50">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 pt-4 pb-3">
         <h1 className="text-lg font-bold text-gray-900">📸 แจ้งพบสัตว์</h1>
-        <p className="text-xs text-gray-500 mt-0.5">ถ่ายภาพสัตว์พร้อมพิกัด เพื่อให้เจ้าหน้าที่ระบุชนิด</p>
+        <p className="text-xs text-gray-500 mt-0.5">ถ่ายภาพสัตว์พร้อมพิกัด เพื่อให้ระบบระบุชนิด</p>
       </div>
 
       <div className="px-4 py-4 space-y-4">
@@ -154,13 +210,13 @@ export function ReportSighting() {
 
         <button
           onClick={handleSubmit}
-          disabled={submitting || !hasImage}
+          disabled={submitting || !previewUrl}
           className="w-full py-4 rounded-2xl bg-green-600 text-white font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform"
         >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              กำลังส่ง...
+              กำลังอัปโหลดและส่ง...
             </span>
           ) : (
             '📤 ส่งรายงานไปยังแชท'
