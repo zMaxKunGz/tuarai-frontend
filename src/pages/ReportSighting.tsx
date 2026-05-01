@@ -1,7 +1,7 @@
 import liff from '@line/liff'
 import { useEffect, useRef, useState } from 'react'
 
-const DEMO_IMAGE_URL = 'https://www.piqsels.com/th/search?q=%E0%B8%8A%E0%B8%B0%E0%B8%99%E0%B8%B5'
+const DEMO_IMAGE_URL = 'https://scontent.fbkk5-7.fna.fbcdn.net/v/t1.6435-9/50512696_1210100585811121_3283193088347996160_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=13d280&_nc_eui2=AeGJVYklAPdKBfagDRNwx3yb0tYjdOocvbnS1iN06hy9uWYNJ0ZuRFy2Iozke7iOriPAd7AdSlyVZNJSoUHibBZY&_nc_ohc=E3aE9uNhamsQ7kNvwHo1bu3&_nc_oc=AdreqbVBahnlJJ7bHJYdjQGEiOCT8QV2JW-0e2TlG_fqLFtXfNzjoBZUMhitamIoa8k&_nc_zt=23&_nc_ht=scontent.fbkk5-7.fna&_nc_gid=8d3_Agc6T2VM8KjElXGU9Q&_nc_ss=7b2a8&oh=00_Af6GPpME-f23htfW23FHI-EGBAkF0jMHcUYgAh_A9WerrQ&oe=6A1C89AE'
 
 interface GpsLocation {
   latitude: number
@@ -125,17 +125,13 @@ export function ReportSighting() {
             },
           },
         },
-        // Signal for backend to process
-        {
-          type: 'text',
-          text: `IDENTIFY_WILDLIFE::${imageUrl}::${latitude}::${longitude}`,
-        },
       ])
 
       liff.closeWindow()
     } catch (err) {
-      console.error(err)
-      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('sendMessages error:', msg)
+      setError(`เกิดข้อผิดพลาด: ${msg}`)
       setSubmitting(false)
     }
   }
@@ -167,7 +163,6 @@ export function ReportSighting() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={handleFileChange}
         />

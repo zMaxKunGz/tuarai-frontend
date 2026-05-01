@@ -59,6 +59,27 @@ export function AnimalPopup({ animal, onClose }: Props) {
           สถานะ IUCN: <strong className="text-gray-800">{IUCN_LABEL[animal.iucnStatus]}</strong>
         </p>
 
+        {animal.food && (
+          <div className="mt-4 bg-green-50 rounded-2xl p-4 space-y-1">
+            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">🍃 อาหาร</p>
+            <p className="text-sm text-gray-700">{animal.food}</p>
+          </div>
+        )}
+
+        {animal.behavior && (
+          <div className="mt-3 bg-blue-50 rounded-2xl p-4 space-y-1">
+            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">🐾 นิสัย</p>
+            <p className="text-sm text-gray-700">{animal.behavior}</p>
+          </div>
+        )}
+
+        {animal.storyTeen && (
+          <div className="mt-3 bg-amber-50 rounded-2xl p-4 space-y-1">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">✨ เรื่องราว</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{animal.storyTeen}</p>
+          </div>
+        )}
+
         <button
           onClick={onClose}
           className="mt-5 w-full btn-primary"

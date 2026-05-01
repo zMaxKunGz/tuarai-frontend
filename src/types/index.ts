@@ -12,6 +12,9 @@ export interface Wildlife {
   iucnStatus: IUCNStatus
   imageUrl: string
   parkIds: string[]
+  storyTeen?: string
+  food?: string
+  behavior?: string
 }
 
 export interface ProtectedArea {

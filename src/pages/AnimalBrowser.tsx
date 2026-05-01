@@ -324,30 +324,59 @@ function AnimalBrowserPopup({ animal, onClose, onFindParks }: { animal: Wildlife
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-t-3xl w-full max-w-lg p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+      <div
+        className="relative bg-white rounded-t-3xl w-full max-w-lg shadow-2xl max-h-[85vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 pb-0">
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+        </div>
 
-        {animal.imageUrl && (
-          <div className="w-full h-48 rounded-2xl overflow-hidden mb-4 bg-gray-100">
-            <img src={animal.imageUrl} alt={animal.enName} className="w-full h-full object-cover" />
+        <div className="overflow-y-auto px-6 pb-6 space-y-3">
+          {animal.imageUrl && (
+            <div className="w-full h-48 rounded-2xl overflow-hidden bg-gray-100">
+              <img src={animal.imageUrl} alt={animal.enName} className="w-full h-full object-cover" />
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{animal.thName}</h2>
+            <p className="text-base text-gray-600">{animal.enName}</p>
+            <p className="text-sm text-gray-400 italic">{animal.scientificName}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              พบได้ใน <strong className="text-gray-800">{animal.parkIds?.length ?? 0} อุทยาน</strong>
+            </p>
           </div>
-        )}
 
-        <h2 className="text-2xl font-bold text-gray-900">{animal.thName}</h2>
-        <p className="text-base text-gray-600">{animal.enName}</p>
-        <p className="text-sm text-gray-400 italic">{animal.scientificName}</p>
+          {animal.food && (
+            <div className="bg-green-50 rounded-2xl p-4 space-y-1">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">🍃 อาหาร</p>
+              <p className="text-sm text-gray-700">{animal.food}</p>
+            </div>
+          )}
 
-        <p className="mt-2 text-sm text-gray-500">
-          พบได้ใน <strong className="text-gray-800">{animal.parkIds?.length ?? 0} อุทยาน</strong>
-        </p>
+          {animal.behavior && (
+            <div className="bg-blue-50 rounded-2xl p-4 space-y-1">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">🐾 นิสัย</p>
+              <p className="text-sm text-gray-700">{animal.behavior}</p>
+            </div>
+          )}
 
-        <div className="mt-4 flex gap-2">
-          <button onClick={onFindParks} className="flex-1 btn-primary text-center">
-            🗺 ค้นหาอุทยาน
-          </button>
-          <button onClick={onClose} className="flex-1 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600">
-            ปิด
-          </button>
+          {animal.storyTeen && (
+            <div className="bg-amber-50 rounded-2xl p-4 space-y-1">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">✨ เรื่องราว</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{animal.storyTeen}</p>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={onFindParks} className="flex-1 btn-primary text-center">
+              🗺 ค้นหาอุทยาน
+            </button>
+            <button onClick={onClose} className="flex-1 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600">
+              ปิด
+            </button>
+          </div>
         </div>
       </div>
     </div>
