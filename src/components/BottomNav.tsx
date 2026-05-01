@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 const tabs = [
   { to: '/', label: 'ค้นหาสัตว์', icon: '🦁' },
+  { to: '/encounters', label: 'พบแล้ว', icon: '🐾' },
   { to: '/report', label: 'แจ้งพบสัตว์', icon: '📸' },
 ]
 

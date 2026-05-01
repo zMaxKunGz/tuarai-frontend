@@ -24,6 +24,7 @@ interface AiSearchLocation {
 interface AiSearchMatch {
   score: number
   matched_keywords: string[]
+  matched_location_keywords: string[]
   name_th: string
   scientific_name: string
   common_name: string
@@ -34,8 +35,20 @@ interface AiSearchMatch {
   image_url?: string
 }
 
+interface AiInterpretedQuery {
+  animal_keywords: string[]
+  location: string | null
+  location_keywords: string[]
+  status_keywords: string[]
+  category_keywords: string[]
+  other_keywords: string[]
+}
+
 interface AiSearchResponse {
   keywords: string[]
+  location: string | null
+  location_keywords: string[]
+  interpreted_query: AiInterpretedQuery
   matches: AiSearchMatch[]
 }
 
@@ -52,6 +65,7 @@ export function AnimalBrowser() {
   const [selectedAnimal, setSelectedAnimal] = useState<Wildlife | null>(null)
   const [aiResults, setAiResults] = useState<AiSearchMatch[]>([])
   const [aiKeywords, setAiKeywords] = useState<string[]>([])
+  const [aiLocation, setAiLocation] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiSubmittedQuery, setAiSubmittedQuery] = useState('')
@@ -86,6 +100,7 @@ export function AnimalBrowser() {
     if (searchMode !== 'ai') {
       setAiResults([])
       setAiKeywords([])
+      setAiLocation(null)
       setAiError(null)
       setAiLoading(false)
       setAiSubmittedQuery('')
@@ -96,6 +111,7 @@ export function AnimalBrowser() {
     if (!query) {
       setAiResults([])
       setAiKeywords([])
+      setAiLocation(null)
       setAiError(null)
       setAiLoading(false)
       return
@@ -127,6 +143,7 @@ export function AnimalBrowser() {
 
           const data = (await response.json()) as AiSearchResponse
           setAiKeywords(data.keywords ?? [])
+          setAiLocation(data.location ?? null)
           setAiResults(data.matches ?? [])
         } catch (err) {
           if (controller.signal.aborted) return
@@ -200,8 +217,13 @@ export function AnimalBrowser() {
         {!loading && searchMode === 'normal' && (
           <p className="text-xs text-gray-400">พบ {filtered.length} ชนิด</p>
         )}
-        {!aiLoading && searchMode === 'ai' && aiKeywords.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+        {!aiLoading && searchMode === 'ai' && (aiKeywords.length > 0 || aiLocation) && (
+          <div className="flex flex-wrap gap-2 items-center">
+            {aiLocation && (
+              <span className="badge bg-orange-50 text-orange-700 border border-orange-100">
+                📍 {aiLocation}
+              </span>
+            )}
             {aiKeywords.map(keyword => (
               <span key={keyword} className="badge bg-emerald-50 text-emerald-700 border border-emerald-100">
                 {keyword}
