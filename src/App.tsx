@@ -4,26 +4,48 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AnimalBrowser } from './pages/AnimalBrowser'
 import { AnimalParks } from './pages/AnimalParks'
 import { ParkDetail } from './pages/ParkDetail'
+import { ReportSighting } from './pages/ReportSighting'
+
+let liffInitialized = false
 
 export default function App() {
   const [liffReady, setLiffReady] = useState(false)
   const [liffError, setLiffError] = useState<string | null>(null)
 
   useEffect(() => {
-    liff.init({ liffId: import.meta.env.VITE_LIFF_ID })
-      .then(() => {
-        if (!liff.isLoggedIn() && !liff.isInClient()) {
-          liff.login()
+    let cancelled = false
+
+    async function boot() {
+      try {
+        if (!liffInitialized) {
+          await liff.init({
+            liffId: import.meta.env.VITE_LIFF_ID,
+          })
+          liffInitialized = true
         }
-        setLiffReady(true)
-        liff.getProfile().then(profile => {
-          console.log(profile)
-        })
-      .catch(err => {
+
+        if (!liff.isLoggedIn()) {
+          liff.login()
+          return
+        }
+
+        if (!cancelled) {
+          setLiffReady(true)
+        }
+      } catch (err) {
         console.error('LIFF init failed:', err)
-        setLiffError(err)
-      })
-    })
+        if (!cancelled) {
+          setLiffError(err instanceof Error ? err.message : 'LIFF init failed')
+          setLiffReady(true)
+        }
+      }
+    }
+
+    void boot()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   if (!liffReady) {
@@ -48,6 +70,7 @@ export default function App() {
         <Route path="/" element={<AnimalBrowser />} />
         <Route path="/animal/:animalId/parks" element={<AnimalParks />} />
         <Route path="/park/:parkId" element={<ParkDetail />} />
+        <Route path="/report" element={<ReportSighting />} />
       </Routes>
     </BrowserRouter>
   )

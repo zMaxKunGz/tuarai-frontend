@@ -3,17 +3,59 @@ import { useNavigate } from 'react-router-dom'
 import { useWildlife } from '../hooks/useWildlife'
 import { AnimalCard } from '../components/AnimalCard'
 import { FilterBar } from '../components/FilterBar'
+import { IUCNBadge } from '../components/IUCNBadge'
+import { VERTEBRATE_LABEL } from '../utils/dangerLevel'
 
 import type { Wildlife, VertebateType, IUCNStatus } from '../types'
+
+type SearchMode = 'normal' | 'ai'
+
+interface AiSearchLocation {
+  protected_area_th?: string
+  protected_area_en?: string
+  site_code?: string
+  locality_th?: string
+  locality_en?: string
+  province?: string
+  x_indian75?: number
+  y_indian75?: number
+}
+
+interface AiSearchMatch {
+  score: number
+  matched_keywords: string[]
+  name_th: string
+  scientific_name: string
+  common_name: string
+  category: string
+  iucn_status: IUCNStatus
+  locations: AiSearchLocation[]
+  location_names: string[]
+  image_url?: string
+}
+
+interface AiSearchResponse {
+  keywords: string[]
+  matches: AiSearchMatch[]
+}
+
+const AI_SEARCH_ENDPOINT = import.meta.env.VITE_AI_SEARCH_ENDPOINT || '/ai-search/keywords'
 
 export function AnimalBrowser() {
   const { wildlife, loading } = useWildlife()
   const navigate = useNavigate()
 
   const [search, setSearch] = useState('')
+  const [searchMode, setSearchMode] = useState<SearchMode>('normal')
   const [vertebrateType, setVertebrateType] = useState<VertebateType | ''>('')
   const [iucnStatus, setIUCNStatus] = useState<IUCNStatus | ''>('')
   const [selectedAnimal, setSelectedAnimal] = useState<Wildlife | null>(null)
+  const [aiResults, setAiResults] = useState<AiSearchMatch[]>([])
+  const [aiKeywords, setAiKeywords] = useState<string[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [aiSubmittedQuery, setAiSubmittedQuery] = useState('')
+  const [aiSubmitToken, setAiSubmitToken] = useState(0)
   const PAGE_SIZE = 10
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
@@ -27,11 +69,90 @@ export function AnimalBrowser() {
     })
   }, [wildlife, search, vertebrateType, iucnStatus])
 
+  const aiFilteredResults = useMemo(() => {
+    return aiResults.filter(result => {
+      const matchesType =
+        !vertebrateType ||
+        VERTEBRATE_LABEL[vertebrateType] === result.category
+      const matchesIUCN = !iucnStatus || result.iucn_status === iucnStatus
+      return matchesType && matchesIUCN
+    })
+  }, [aiResults, vertebrateType, iucnStatus])
+
   // Reset pagination whenever filters change
   useEffect(() => { setVisibleCount(PAGE_SIZE) }, [search, vertebrateType, iucnStatus])
 
+  useEffect(() => {
+    if (searchMode !== 'ai') {
+      setAiResults([])
+      setAiKeywords([])
+      setAiError(null)
+      setAiLoading(false)
+      setAiSubmittedQuery('')
+      return
+    }
+
+    const query = aiSubmittedQuery.trim()
+    if (!query) {
+      setAiResults([])
+      setAiKeywords([])
+      setAiError(null)
+      setAiLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => {
+      async function runAiSearch() {
+        setAiLoading(true)
+        setAiError(null)
+        try {
+          const response = await fetch(AI_SEARCH_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              context: query,
+              max_keywords: 5,
+              match_limit: 10,
+            }),
+            signal: controller.signal,
+          })
+
+          if (!response.ok) {
+            throw new Error(`AI search failed with status ${response.status}`)
+          }
+
+          const data = (await response.json()) as AiSearchResponse
+          setAiKeywords(data.keywords ?? [])
+          setAiResults(data.matches ?? [])
+        } catch (err) {
+          if (controller.signal.aborted) return
+          console.error('AI search failed:', err)
+          setAiResults([])
+          setAiKeywords([])
+          setAiError(err instanceof Error ? err.message : 'AI search failed')
+        } finally {
+          if (!controller.signal.aborted) {
+            setAiLoading(false)
+          }
+        }
+      }
+
+      void runAiSearch()
+    }, 350)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timeoutId)
+    }
+  }, [searchMode, aiSubmitToken])
+
   const visible = filtered.slice(0, visibleCount)
   const hasMore = visibleCount < filtered.length
+  const aiVisible = aiFilteredResults
 
   function handleAnimalClick(animal: Wildlife) {
     // Show popup for quick view; navigate to parks if user wants to find the animal
@@ -44,6 +165,17 @@ export function AnimalBrowser() {
     }
   }
 
+  function handleSearchModeChange(nextMode: SearchMode) {
+    setSearch('')
+    setSearchMode(nextMode)
+    setAiSubmittedQuery('')
+    setAiResults([])
+    setAiKeywords([])
+    setAiError(null)
+    setAiLoading(false)
+    setVisibleCount(PAGE_SIZE)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -52,28 +184,66 @@ export function AnimalBrowser() {
         <FilterBar
           search={search}
           onSearchChange={setSearch}
+          searchMode={searchMode}
+          onSearchModeChange={handleSearchModeChange}
+          onSearchSubmit={() => {
+            if (searchMode === 'ai') {
+              setAiSubmittedQuery(search)
+              setAiSubmitToken(token => token + 1)
+            }
+          }}
           vertebrateType={vertebrateType}
           onVertebrateTypeChange={setVertebrateType}
           iucnStatus={iucnStatus}
           onIUCNStatusChange={setIUCNStatus}
         />
-        {!loading && (
+        {!loading && searchMode === 'normal' && (
           <p className="text-xs text-gray-400">พบ {filtered.length} ชนิด</p>
+        )}
+        {!aiLoading && searchMode === 'ai' && aiKeywords.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {aiKeywords.map(keyword => (
+              <span key={keyword} className="badge bg-emerald-50 text-emerald-700 border border-emerald-100">
+                {keyword}
+              </span>
+            ))}
+          </div>
+        )}
+        {searchMode === 'ai' && aiError && (
+          <p className="text-xs text-red-500">{aiError}</p>
         )}
 
       </div>
 
       {/* List */}
       <div className="px-4 py-3 space-y-2">
-        {loading ? (
+        {searchMode === 'normal' && loading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="card h-20 animate-pulse bg-gray-100" />
           ))
-        ) : filtered.length === 0 ? (
+        ) : searchMode === 'normal' && filtered.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <p className="text-4xl mb-2">🔍</p>
             <p>ไม่พบสัตว์ที่ตรงกับการค้นหา</p>
           </div>
+        ) : searchMode === 'ai' && !aiSubmittedQuery.trim() ? (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-4xl mb-2">🤖</p>
+            <p>พิมพ์คำอธิบายแล้วกด Enter เพื่อค้นหาด้วย AI</p>
+          </div>
+        ) : searchMode === 'ai' && aiLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card h-28 animate-pulse bg-gray-100" />
+          ))
+        ) : searchMode === 'ai' && aiSubmittedQuery.trim() && aiVisible.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-4xl mb-2">🤖</p>
+            <p>ไม่พบผลลัพธ์จาก AI search</p>
+          </div>
+        ) : searchMode === 'ai' ? (
+          aiVisible.map(result => (
+            <AiMatchCard key={`${result.name_th}-${result.scientific_name}`} result={result} />
+          ))
         ) : (
           visible.map(animal => (
             <AnimalCard key={animal.id} animal={animal} onClick={handleAnimalClick} />
@@ -81,7 +251,7 @@ export function AnimalBrowser() {
         )}
       </div>
 
-      {!loading && hasMore && (
+      {searchMode === 'normal' && !loading && hasMore && (
         <div className="px-4 pb-6">
           <button
             onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
@@ -99,6 +269,51 @@ export function AnimalBrowser() {
           onClose={() => setSelectedAnimal(null)}
           onFindParks={handleFindParks}
         />
+      )}
+    </div>
+  )
+}
+
+function AiMatchCard({ result }: { result: AiSearchMatch }) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex gap-3 p-3">
+        <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
+          {result.image_url ? (
+            <img src={result.image_url} alt={result.common_name || result.name_th} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-2xl">🦎</div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 truncate">{result.name_th}</p>
+              <p className="text-xs text-gray-500 truncate">{result.common_name}</p>
+              <p className="text-xs text-gray-400 italic truncate">{result.scientific_name}</p>
+            </div>
+            <span className="badge bg-emerald-50 text-emerald-700">{result.score}</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <IUCNBadge status={result.iucn_status} />
+            <span className="badge bg-gray-100 text-gray-600">{result.category}</span>
+          </div>
+        </div>
+      </div>
+      {result.matched_keywords.length > 0 && (
+        <div className="px-3 pb-3 flex flex-wrap gap-2">
+          {result.matched_keywords.map(keyword => (
+            <span key={keyword} className="badge bg-blue-50 text-blue-700">
+              {keyword}
+            </span>
+          ))}
+        </div>
+      )}
+      {result.location_names.length > 0 && (
+        <div className="border-t border-gray-50 px-3 py-2 text-xs text-gray-500">
+          พบใน: {result.location_names.slice(0, 3).join(' · ')}
+          {result.location_names.length > 3 ? ' ...' : ''}
+        </div>
       )}
     </div>
   )
