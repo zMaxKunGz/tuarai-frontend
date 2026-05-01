@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWildlife } from '../hooks/useWildlife'
 import { AnimalCard } from '../components/AnimalCard'
@@ -14,6 +14,8 @@ export function AnimalBrowser() {
   const [vertebrateType, setVertebrateType] = useState<VertebateType | ''>('')
   const [iucnStatus, setIUCNStatus] = useState<IUCNStatus | ''>('')
   const [selectedAnimal, setSelectedAnimal] = useState<Wildlife | null>(null)
+  const PAGE_SIZE = 10
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -24,6 +26,12 @@ export function AnimalBrowser() {
       return matchesSearch && matchesType && matchesIUCN
     })
   }, [wildlife, search, vertebrateType, iucnStatus])
+
+  // Reset pagination whenever filters change
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [search, vertebrateType, iucnStatus])
+
+  const visible = filtered.slice(0, visibleCount)
+  const hasMore = visibleCount < filtered.length
 
   function handleAnimalClick(animal: Wildlife) {
     // Show popup for quick view; navigate to parks if user wants to find the animal
@@ -52,6 +60,7 @@ export function AnimalBrowser() {
         {!loading && (
           <p className="text-xs text-gray-400">พบ {filtered.length} ชนิด</p>
         )}
+
       </div>
 
       {/* List */}
@@ -66,11 +75,22 @@ export function AnimalBrowser() {
             <p>ไม่พบสัตว์ที่ตรงกับการค้นหา</p>
           </div>
         ) : (
-          filtered.map(animal => (
+          visible.map(animal => (
             <AnimalCard key={animal.id} animal={animal} onClick={handleAnimalClick} />
           ))
         )}
       </div>
+
+      {!loading && hasMore && (
+        <div className="px-4 pb-6">
+          <button
+            onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+            className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-600 active:scale-[0.98] transition-transform"
+          >
+            โหลดเพิ่ม ({filtered.length - visibleCount} ชนิดที่เหลือ)
+          </button>
+        </div>
+      )}
 
       {/* Animal detail popup with "Find parks" CTA */}
       {selectedAnimal && (
