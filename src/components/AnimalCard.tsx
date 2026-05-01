@@ -14,7 +14,7 @@ export function AnimalCard({ animal, onClick, compact = false }: Props) {
       onClick={() => onClick(animal)}
       className="card flex items-center gap-3 p-3 w-full text-left active:scale-[0.98] transition-transform"
     >
-      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+      <div className="w-16 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
         {animal.imageUrl ? (
           <img
             src={animal.imageUrl}

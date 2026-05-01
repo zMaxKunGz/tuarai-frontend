@@ -24,6 +24,9 @@ serviceAccountKey.json
 # Data directory (large generated files, re-generate with parse_excel.py)
 data/
 
+# Claude Code
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
